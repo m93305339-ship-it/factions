@@ -1,0 +1,412 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Faction Kit Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow form column of numbered sections, with the generated Lua at the end. */
+:root {
+  --bg: #eef1f3;
+  --panel: #ffffff;
+  --ink: #18222b;
+  --muted: #5b6873;
+  --line: #d3dae0;
+  --accent: #b2382b;
+  --accent-ink: #ffffff;
+  --field: #f7f9fa;
+  --code-bg: #141b21;
+  --code-ink: #d9e3ea;
+  --warn-bg: #fdf1dd;
+  --warn-ink: #7a4b07;
+  --bad: #b3261e;
+  --font-display: "Oswald", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", Roboto, Arial, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #12181d; --panel: #1a2229; --ink: #e3e9ee; --muted: #93a1ad; --line: #2c3740;
+    --accent: #e0604f; --accent-ink: #160b09; --field: #141b21; --code-bg: #0b1014; --code-ink: #d9e3ea;
+    --warn-bg: #3a2c12; --warn-ink: #f2cf8f; --bad: #ff8a80; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #12181d; --panel: #1a2229; --ink: #e3e9ee; --muted: #93a1ad; --line: #2c3740;
+  --accent: #e0604f; --accent-ink: #160b09; --field: #141b21; --code-bg: #0b1014; --code-ink: #d9e3ea;
+  --warn-bg: #3a2c12; --warn-ink: #f2cf8f; --bad: #ff8a80; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.wrap { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 28px 64px; display: grid; gap: 20px; }
+header h1 { font-family: var(--font-display); font-weight: 600; font-size: 2.1rem; letter-spacing: .02em; text-transform: uppercase; margin: 0; text-wrap: balance; }
+header p { margin: 6px 0 0; color: var(--muted); max-width: 62ch; }
+.banner { background: var(--warn-bg); color: var(--warn-ink); border-radius: 8px; padding: 10px 14px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
+.banner p { margin: 0; min-width: 0; }
+section { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 18px; display: grid; gap: 14px; }
+section > h2 { font-family: var(--font-display); font-weight: 500; font-size: 1.15rem; letter-spacing: .06em; text-transform: uppercase; margin: 0; display: flex; gap: 10px; align-items: baseline; }
+section > h2 .step { color: var(--accent); font-variant-numeric: tabular-nums; }
+.hint { color: var(--muted); font-size: .88rem; margin: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px; }
+label { display: grid; gap: 4px; font-weight: 500; font-size: .9rem; min-width: 0; }
+label small { font-weight: 400; color: var(--muted); }
+input, textarea, select { font: inherit; color: var(--ink); background: var(--field); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; width: 100%; min-width: 0; }
+textarea { resize: vertical; min-height: 64px; }
+input:focus-visible, textarea:focus-visible, button:focus-visible, a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input.invalid { border-color: var(--bad); }
+.err { color: var(--bad); font-size: .82rem; font-weight: 400; }
+.color-row { display: grid; grid-template-columns: 44px 1fr; gap: 8px; align-items: center; }
+.color-row input[type="color"] { padding: 2px; height: 40px; cursor: pointer; }
+a { color: var(--accent); }
+.kit { border: 1px solid var(--line); border-radius: 8px; padding: 14px; display: grid; gap: 12px; background: var(--field); }
+.kit-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.kit-head strong { font-family: var(--font-display); font-weight: 500; letter-spacing: .05em; text-transform: uppercase; }
+.kit input, .kit textarea { background: var(--panel); }
+button { font: inherit; font-weight: 600; border-radius: 6px; padding: 8px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--ink); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+button.ghost { background: transparent; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.toolchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-family: var(--font-mono); font-size: .8rem; font-weight: 500; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--line); background: var(--panel); }
+pre { margin: 0; background: var(--code-bg); color: var(--code-ink); font-family: var(--font-mono); font-size: .82rem; line-height: 1.55; padding: 14px; border-radius: 8px; overflow-x: auto; white-space: pre; }
+.status { font-size: .88rem; color: var(--muted); }
+.problems { margin: 0; padding-left: 18px; color: var(--bad); font-size: .9rem; }
+@media (prefers-reduced-motion: no-preference) { button { transition: filter .15s; } button:hover { filter: brightness(1.06); } }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>Faction Kit Builder</h1>
+    <p>Fill this in for your faction, then press <b>Copy for At0micTheNoob</b> at the bottom and send what it copies to At0micTheNoob. He'll add your faction and kits to the TDM server.</p>
+  </header>
+
+  <div class="banner" id="exampleBanner">
+    <p>The form is filled in with an example faction. Replace it with yours, or start blank.</p>
+    <button type="button" class="ghost" id="clearBtn">Start blank</button>
+  </div>
+
+  <section>
+    <h2><span class="step">1</span> Faction</h2>
+    <div class="grid">
+      <label for="fName">Faction name <small>Shown in titles and rank tags, e.g. EXILED</small>
+        <input id="fName" type="text" autocomplete="off">
+      </label>
+      <label for="fKey">Command name <small>One lowercase word, typed in !factiongametdm</small>
+        <input id="fKey" type="text" autocomplete="off" spellcheck="false">
+        <span class="err" id="fKeyErr" hidden></span>
+      </label>
+      <label for="fTeam">Team on the map <small>Exactly as the team is named in-game</small>
+        <input id="fTeam" type="text" autocomplete="off">
+      </label>
+      <label for="fFont">Rank tag font <small>A Roblox font name</small>
+        <input id="fFont" type="text" list="fontList" autocomplete="off">
+      </label>
+    </div>
+    <datalist id="fontList">
+      <option value="Oswald"></option><option value="Jura"></option><option value="Kalam"></option>
+      <option value="Sarpanch"></option><option value="Michroma"></option><option value="Bangers"></option>
+      <option value="Bodoni"></option><option value="Creepster"></option><option value="DenkOne"></option>
+      <option value="Fondamento"></option><option value="FredokaOne"></option><option value="GrenzeGotisch"></option>
+      <option value="IndieFlower"></option><option value="JosefinSans"></option><option value="Merriweather"></option>
+      <option value="Nunito"></option><option value="PatrickHand"></option><option value="PermanentMarker"></option>
+      <option value="Roboto"></option><option value="RobotoMono"></option>
+      <option value="SpecialElite"></option><option value="TitilliumWeb"></option><option value="Ubuntu"></option>
+      <option value="Arcade"></option><option value="Antique"></option><option value="Cartoon"></option>
+      <option value="Code"></option><option value="Fantasy"></option><option value="Garamond"></option>
+      <option value="Highway"></option><option value="SciFi"></option>
+    </datalist>
+  </section>
+
+  <section>
+    <h2><span class="step">2</span> Colours</h2>
+    <p class="hint">Pick a colour, or type R, G, B numbers. Want a Roblox BrickColor? Look up its RGB on <a href="https://robloxden.com/color-codes" target="_blank" rel="noopener">robloxden.com/color-codes</a> and type it here.</p>
+    <div class="grid">
+      <div class="colorfield" data-id="cMain" data-label="Main colour" data-note="Used for anything below left blank"></div>
+      <div class="colorfield" data-id="cBox" data-label="Colour box" data-note="The coloured box on your side"></div>
+      <div class="colorfield" data-id="cOutline" data-label="Neon outline" data-note="The glowing outline"></div>
+      <div class="colorfield" data-id="cSpawn" data-label="Spawn" data-note="Your spawn area"></div>
+    </div>
+  </section>
+
+  <section>
+    <h2><span class="step">3</span> Kits</h2>
+    <p class="hint">Players pick these with <code>!kit name</code> inside their killbox. Tools must be spelled exactly like the in-game tool names.</p>
+    <div class="toolchips" aria-label="Tool names already on the server">
+      <span class="hint">Tools on the server:</span>
+      <span class="chip">AK-47</span><span class="chip">M4</span><span class="chip">ACR</span><span class="chip">EVO 3 Micro</span>
+      <span class="chip">M110</span><span class="chip">XM-250</span><span class="chip">XM250</span><span class="chip">Spas - 12</span>
+      <span class="chip">Pistol</span><span class="chip">Knife</span><span class="chip">Baton</span><span class="chip">Medkit</span>
+      <span class="chip">Radio</span><span class="chip">Shield</span>
+    </div>
+    <div id="kits" style="display:grid; gap:12px;"></div>
+    <div class="row">
+      <button type="button" id="addKit">Add a kit</button>
+    </div>
+    <label for="fDefault">Starting kit <small>The kit players spawn with</small>
+      <select id="fDefault"></select>
+    </label>
+  </section>
+
+  <section>
+    <h2><span class="step">4</span> Anything else</h2>
+    <label for="fNotes">Notes for At0micTheNoob <small>Optional. e.g. morphs that still need making, who your leaders are</small>
+      <textarea id="fNotes"></textarea>
+    </label>
+  </section>
+
+  <section>
+    <h2><span class="step">5</span> Send it</h2>
+    <ul class="problems" id="problems" hidden></ul>
+    <div class="row">
+      <button type="button" class="primary" id="copyBtn">Copy for At0micTheNoob</button>
+      <span class="status" id="copyStatus" role="status"></span>
+    </div>
+    <pre id="output" tabindex="0" aria-label="Generated faction code"></pre>
+  </section>
+</div>
+
+<script>
+(function () {
+  const TOOLS = ["AK-47","M4","ACR","EVO 3 Micro","M110","XM-250","XM250","Spas - 12","Pistol","Knife","Baton","Medkit","Radio","Shield"];
+
+  const EXAMPLE = {
+    name: "IRON WOLVES", key: "wolves", team: "IRON WOLVES", font: "Michroma",
+    colors: { cMain: [90, 98, 110], cBox: [90, 98, 110], cOutline: [170, 180, 192], cSpawn: [90, 98, 110] },
+    kits: [
+      { name: "assault", morph: "Wolf Assault", label: "", tools: "ACR, Pistol, Knife, Radio", hp: 125 },
+      { name: "medic", morph: "Wolf Medic", label: "", tools: "EVO 3 Micro, Pistol, Knife, Medkit, Radio", hp: 100 },
+      { name: "breacher", morph: "Wolf Breacher", label: "", tools: "Spas - 12, Pistol, Knife, Radio", hp: 100 }
+    ],
+    defaultKit: "assault", notes: ""
+  };
+
+  const $ = (id) => document.getElementById(id);
+  let kitCount = 0;
+
+  function toHex(rgb) {
+    return "#" + rgb.map((n) => Math.max(0, Math.min(255, n | 0)).toString(16).padStart(2, "0")).join("");
+  }
+  function fromHex(hex) {
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex);
+    return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : null;
+  }
+  function parseRgb(text) {
+    const parts = String(text).split(/[^0-9]+/).filter(Boolean).map(Number);
+    if (parts.length !== 3 || parts.some((n) => n > 255)) return null;
+    return parts;
+  }
+
+  // Colour fields: a picker and an "R, G, B" box kept in step.
+  document.querySelectorAll(".colorfield").forEach((box) => {
+    const id = box.dataset.id;
+    box.innerHTML =
+      '<label for="' + id + 'Text">' + box.dataset.label + ' <small>' + box.dataset.note + '</small>' +
+      '<span class="color-row"><input type="color" id="' + id + 'Pick" aria-label="' + box.dataset.label + ' picker">' +
+      '<input type="text" id="' + id + 'Text" placeholder="R, G, B" autocomplete="off"></span>' +
+      '<span class="err" id="' + id + 'Err" hidden>Use three numbers from 0 to 255, like 204, 255, 204</span></label>';
+    const pick = $(id + "Pick"), text = $(id + "Text");
+    pick.addEventListener("input", () => { text.value = fromHex(pick.value).join(", "); update(); });
+    text.addEventListener("input", () => { const rgb = parseRgb(text.value); if (rgb) pick.value = toHex(rgb); update(); });
+  });
+
+  function setColor(id, rgb) {
+    $(id + "Text").value = rgb ? rgb.join(", ") : "";
+    $(id + "Pick").value = rgb ? toHex(rgb) : "#000000";
+  }
+
+  function addKit(kit) {
+    kitCount += 1;
+    const n = kitCount;
+    const el = document.createElement("div");
+    el.className = "kit";
+    el.dataset.kit = String(n);
+    el.innerHTML =
+      '<div class="kit-head"><strong>Kit</strong><button type="button" class="ghost" data-remove>Remove</button></div>' +
+      '<div class="grid">' +
+      '<label for="kName' + n + '">Kit name <small>Lowercase, no spaces, e.g. assault</small><input id="kName' + n + '" type="text" autocomplete="off" spellcheck="false"><span class="err" hidden></span></label>' +
+      '<label for="kMorph' + n + '">Morph <small>Exact morph name</small><input id="kMorph' + n + '" type="text" autocomplete="off"></label>' +
+      '<label for="kHp' + n + '">Max health<input id="kHp' + n + '" type="number" min="1" max="1000" step="1"></label>' +
+      '<label for="kLabel' + n + '">Rank tag label <small>Optional, defaults to the kit name in capitals</small><input id="kLabel' + n + '" type="text" autocomplete="off"></label>' +
+      '</div>' +
+      '<label for="kTools' + n + '">Tools <small>Separated by commas</small><input id="kTools' + n + '" type="text" autocomplete="off" spellcheck="false"></label>';
+    $("kits").appendChild(el);
+    $("kName" + n).value = kit ? kit.name : "";
+    $("kMorph" + n).value = kit ? kit.morph : "";
+    $("kHp" + n).value = kit ? kit.hp : 100;
+    $("kLabel" + n).value = kit ? kit.label : "";
+    $("kTools" + n).value = kit ? kit.tools : "";
+    el.querySelector("[data-remove]").addEventListener("click", () => { el.remove(); update(); });
+    el.querySelectorAll("input").forEach((i) => i.addEventListener("input", update));
+  }
+
+  function readKits() {
+    return Array.from(document.querySelectorAll(".kit")).map((el) => {
+      const n = el.dataset.kit;
+      return {
+        el: el,
+        name: $("kName" + n).value.trim(),
+        morph: $("kMorph" + n).value.trim(),
+        hp: parseInt($("kHp" + n).value, 10),
+        label: $("kLabel" + n).value.trim(),
+        tools: $("kTools" + n).value.split(",").map((t) => t.trim()).filter(Boolean)
+      };
+    });
+  }
+
+  function luaStr(s) { return '"' + String(s).replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"'; }
+  function rgbLua(rgb) { return "Color3.fromRGB(" + rgb.join(", ") + ")"; }
+
+  function refreshDefault(kits) {
+    const sel = $("fDefault");
+    const keep = sel.value;
+    const names = kits.map((k) => k.name).filter(Boolean);
+    sel.innerHTML = names.map((nm) => '<option value="' + nm.replace(/"/g, "") + '">' + nm.replace(/</g, "&lt;") + "</option>").join("");
+    if (names.includes(keep)) sel.value = keep;
+  }
+
+  function update() {
+    const problems = [];
+    const name = $("fName").value.trim();
+    const key = $("fKey").value.trim();
+    const team = $("fTeam").value.trim();
+    const font = $("fFont").value.trim() || "Oswald";
+
+    const keyOk = /^[a-z0-9_]+$/.test(key);
+    $("fKey").classList.toggle("invalid", key !== "" && !keyOk);
+    $("fKeyErr").hidden = key === "" || keyOk;
+    $("fKeyErr").textContent = "Lowercase letters and numbers only, no spaces";
+
+    if (!name) problems.push("Add a faction name.");
+    if (!key) problems.push("Add a command name.");
+    else if (!keyOk) problems.push("The command name must be one lowercase word.");
+    if (!team) problems.push("Add the team name from the map.");
+
+    const colors = {};
+    ["cMain", "cBox", "cOutline", "cSpawn"].forEach((id) => {
+      const raw = $(id + "Text").value.trim();
+      const rgb = raw ? parseRgb(raw) : null;
+      const bad = raw !== "" && !rgb;
+      $(id + "Text").classList.toggle("invalid", bad);
+      $(id + "Err").hidden = !bad;
+      if (bad) problems.push("Fix the " + id.replace("c", "").toLowerCase() + " colour.");
+      colors[id] = rgb;
+    });
+    if (!colors.cMain) problems.push("Pick a main colour.");
+
+    const kits = readKits();
+    refreshDefault(kits);
+    if (kits.length === 0) problems.push("Add at least one kit.");
+    const seen = {};
+    kits.forEach((k, i) => {
+      const nameInput = k.el.querySelector('[id^="kName"]');
+      const err = nameInput.parentElement.querySelector(".err");
+      let msg = "";
+      if (!k.name) msg = "";
+      else if (!/^[a-z0-9_]+$/.test(k.name)) msg = "Lowercase letters and numbers only, no spaces";
+      else if (seen[k.name]) msg = "Two kits have this name";
+      seen[k.name] = true;
+      nameInput.classList.toggle("invalid", !!msg);
+      err.hidden = !msg;
+      err.textContent = msg;
+      const label = k.name || "kit " + (i + 1);
+      if (!k.name) problems.push("Kit " + (i + 1) + " needs a name.");
+      else if (msg) problems.push("Fix the name of kit " + label + ".");
+      if (!k.morph) problems.push("Kit " + label + " needs a morph name.");
+      if (!(k.hp > 0)) problems.push("Kit " + label + " needs a max health.");
+      if (k.tools.length === 0) problems.push("Kit " + label + " needs at least one tool.");
+      const unknown = k.tools.filter((t) => !TOOLS.includes(t));
+      if (unknown.length) problems.push("Kit " + label + ": " + unknown.join(", ") + " isn't a tool on the server yet. Check the spelling, or mention it in the notes.");
+    });
+
+    const defaultKit = $("fDefault").value;
+
+    // Build the Lua for the FACTIONS table.
+    const main = colors.cMain || [255, 255, 255];
+    const L = [];
+    L.push("-- Faction Kit Builder: " + (name || "unnamed faction"));
+    const notes = $("fNotes").value.trim();
+    if (notes) notes.split(/\r?\n/).forEach((line) => L.push("-- NOTE: " + line));
+    L.push("    " + (keyOk ? key : "faction") + " = {");
+    L.push("        name = " + luaStr(name) + ",");
+    L.push("        team = " + luaStr(team) + ",");
+    L.push("        font = " + luaStr(font) + ",");
+    if (defaultKit) L.push("        defaultKit = " + luaStr(defaultKit) + ",");
+    L.push("        color = " + rgbLua(main) + ",");
+    L.push("        colors = {");
+    L.push("            box = " + rgbLua(colors.cBox || main) + ",");
+    L.push("            outline = " + rgbLua(colors.cOutline || main) + ",");
+    L.push("            spawn = " + rgbLua(colors.cSpawn || main) + ",");
+    L.push("        },");
+    L.push("        kits = {");
+    kits.forEach((k) => {
+      L.push("            " + (k.name || "kit") + " = {");
+      L.push("                morph = " + luaStr(k.morph) + ",");
+      if (k.label) L.push("                label = " + luaStr(k.label) + ",");
+      L.push("                tools = { " + k.tools.map(luaStr).join(", ") + " },");
+      L.push("                maxHealth = " + (k.hp > 0 ? k.hp : 100) + ",");
+      L.push("            },");
+    });
+    L.push("        },");
+    L.push("    },");
+
+    $("output").textContent = L.join("\n");
+
+    const list = $("problems");
+    list.innerHTML = "";
+    problems.forEach((p) => { const li = document.createElement("li"); li.textContent = p; list.appendChild(li); });
+    list.hidden = problems.length === 0;
+    $("copyStatus").textContent = problems.length ? "Fix the items above before sending." : "";
+  }
+
+  function fill(data) {
+    $("fName").value = data.name;
+    $("fKey").value = data.key;
+    $("fTeam").value = data.team;
+    $("fFont").value = data.font;
+    ["cMain", "cBox", "cOutline", "cSpawn"].forEach((id) => setColor(id, data.colors[id]));
+    $("kits").innerHTML = "";
+    kitCount = 0;
+    data.kits.forEach(addKit);
+    $("fNotes").value = data.notes;
+    update();
+    if (data.defaultKit) { $("fDefault").value = data.defaultKit; update(); }
+  }
+
+  ["fName", "fKey", "fTeam", "fFont", "fNotes"].forEach((id) => $(id).addEventListener("input", update));
+  $("fDefault").addEventListener("change", update);
+  $("addKit").addEventListener("click", () => { addKit(null); update(); });
+
+  $("clearBtn").addEventListener("click", () => {
+    fill({ name: "", key: "", team: "", font: "", colors: {}, kits: [{ name: "assault", morph: "", label: "", tools: "", hp: 100 }], defaultKit: "assault", notes: "" });
+    $("exampleBanner").hidden = true;
+    $("fName").focus();
+  });
+
+  $("copyBtn").addEventListener("click", () => {
+    const text = $("output").textContent;
+    const done = () => { $("copyStatus").textContent = "Copied. Paste it in a message to At0micTheNoob."; };
+    const fallback = () => {
+      const range = document.createRange();
+      range.selectNodeContents($("output"));
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+      $("copyStatus").textContent = "Copying is blocked here. The text is selected, so copy it with Ctrl+C (Cmd+C on Mac).";
+    };
+    try {
+      navigator.clipboard.writeText(text).then(done, fallback);
+    } catch (e) { fallback(); }
+  });
+
+  fill(EXAMPLE);
+})();
+</script>
+</body>
+</html>
